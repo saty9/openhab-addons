@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="brunt"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<!-- Sample Thing Type -->
+	<bridge-type id="brunt-bridge">
+		<label>Brunt Account</label>
+		<description>Brunt account needed to access devices</description>
+		<category>WebService</category>
+
+		<config-description>
+			<parameter name="username" type="text" required="true">
+				<label>Username</label>
+			</parameter>
+			<parameter name="password" type="text" required="true">
+				<context>password</context>
+				<label>Password</label>
+			</parameter>
+		</config-description>
+	</bridge-type>
+
+	<thing-type id="brunt-blind-engine">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="brunt-bridge" />
+		</supported-bridge-type-refs>
+		<label>Blind Engine</label>
+		<description>Blind Engine</description>
+		<category>Blinds</category>
+
+		<channels>
+			<channel id="position" typeId="system.brightness">
+				<label>Position</label>
+				<description>Blind position 0 closed 100 open</description>
+			</channel>
+		</channels>
+
+		<config-description>
+			<parameter name="uri" type="text" required="true">
+				<label>uri</label>
+			</parameter>
+		</config-description>
+	</thing-type>
+
+</thing:thing-descriptions>
