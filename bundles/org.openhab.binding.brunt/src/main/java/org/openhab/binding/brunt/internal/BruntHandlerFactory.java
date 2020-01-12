@@ -15,22 +15,24 @@ package org.openhab.binding.brunt.internal;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.smarthome.config.discovery.DiscoveryService;
 import org.eclipse.smarthome.core.i18n.LocaleProvider;
 import org.eclipse.smarthome.core.i18n.LocationProvider;
 import org.eclipse.smarthome.core.i18n.TranslationProvider;
 import org.eclipse.smarthome.core.thing.Bridge;
 import org.eclipse.smarthome.core.thing.Thing;
 import org.eclipse.smarthome.core.thing.ThingTypeUID;
+import org.eclipse.smarthome.core.thing.ThingUID;
 import org.eclipse.smarthome.core.thing.binding.BaseThingHandlerFactory;
 import org.eclipse.smarthome.core.thing.binding.ThingHandler;
 import org.eclipse.smarthome.core.thing.binding.ThingHandlerFactory;
 import org.eclipse.smarthome.io.net.http.HttpClientFactory;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,6 +53,7 @@ public class BruntHandlerFactory extends BaseThingHandlerFactory {
             Stream.of(THING_TYPE_BRIDGE, THING_TYPE_BLIND_ENGINE).collect(Collectors.toSet())
     );
     private final HttpClient httpClient;
+    private final Map<ThingUID, @Nullable ServiceRegistration<?>> discoveryServiceRegs = new HashMap<>();
 
     @Activate
     public BruntHandlerFactory(final @Reference HttpClientFactory httpClientFactory,
@@ -69,11 +72,36 @@ public class BruntHandlerFactory extends BaseThingHandlerFactory {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
 
         if (THING_TYPE_BRIDGE.equals(thingTypeUID)) {
-            return new BruntBridgeHandler((Bridge) thing, httpClient);
+            BruntBridgeHandler handler = new BruntBridgeHandler((Bridge) thing, httpClient);
+            registerDiscoveryService(handler);
+            return handler;
         } else if (THING_TYPE_BLIND_ENGINE.equals(thingTypeUID)){
             return new BruntBlindHandler(thing);
         }
 
         return null;
+    }
+
+    private synchronized void registerDiscoveryService(BruntBridgeHandler bridgeHandler) {
+        BruntDiscoveryService discoveryService = new BruntDiscoveryService(bridgeHandler);
+        //discoveryService.activate();
+        this.discoveryServiceRegs.put(bridgeHandler.getThing().getUID(), bundleContext
+                .registerService(DiscoveryService.class.getName(), discoveryService, new Hashtable<String, Object>()));
+    }
+
+    @Override
+    protected synchronized void removeHandler(ThingHandler thingHandler) {
+        if (thingHandler instanceof BruntBridgeHandler) {
+            ServiceRegistration<?> serviceReg = this.discoveryServiceRegs.remove(thingHandler.getThing().getUID());
+            if (serviceReg != null) {
+                // remove discovery service, if bridge handler is removed
+                BruntDiscoveryService service = (BruntDiscoveryService) bundleContext
+                        .getService(serviceReg.getReference());
+                serviceReg.unregister();
+                //if (service != null) {
+                //    service.deactivate();
+                //}
+            }
+        }
     }
 }

@@ -12,16 +12,12 @@
  */
 package org.openhab.binding.brunt.internal;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-
 import com.google.gson.JsonParser;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.HttpResponse;
 import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.util.StringContentProvider;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
@@ -35,6 +31,9 @@ import org.eclipse.smarthome.core.types.Command;
 import org.eclipse.smarthome.core.types.RefreshType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The {@link BruntHandler} is responsible for handling commands, which are
@@ -175,5 +174,28 @@ public class BruntBridgeHandler extends BaseBridgeHandler {
             logger.error("connection failed");
         }
         return false;
+    }
+
+    public @NonNull String getDevicesString(){
+        authenticate();
+        try {
+            ContentResponse response = httpClient.newRequest(thingListUrl).method(HttpMethod.GET)
+                    .header(HttpHeader.ACCEPT, "application/vnd.brunt.v1+json")
+                    .header(HttpHeader.ACCEPT_LANGUAGE, "en-gb")
+                    .header(HttpHeader.USER_AGENT, "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E216")
+                    .send();
+            if (response.getStatus() == HttpStatus.OK_200){
+                return response.getContentAsString();
+            } else {
+                return "";
+            }
+        } catch (InterruptedException e) {
+            logger.error("Connection to server interrupted");
+        } catch (TimeoutException e) {
+            logger.error("Connection to server timed out");
+        } catch (ExecutionException e) {
+            logger.error("Connection to server failed");
+        }
+        return "";
     }
 }
